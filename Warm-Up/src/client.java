@@ -5,7 +5,7 @@ import java.util.Scanner;
 
 public class client {
     private Socket s = null;
-    private DataOutputStream ServerOut = null;
+    private DataOutputStream serverOut = null;
     private DataInputStream serverIn = null;
     private static Scanner mainScanner = null;
 
@@ -44,7 +44,7 @@ public class client {
         try {
         String userInput = "Bye from Client-" + getHost();
 
-        ServerOut.writeUTF(userInput);
+        serverOut.writeUTF(userInput);
 
         String serverBye = serverIn.readUTF();
         System.out.println("Server: " + serverBye);
@@ -58,25 +58,82 @@ public class client {
 
     private void sendFile(String path) throws Exception
     {
-        ServerOut = new DataOutputStream(s.getOutputStream());
+        serverOut = new DataOutputStream(s.getOutputStream());
         int bytes = 0;
         // Open the File where he located in your pc
         File file = new File(path);
-        FileInputStream fileInputStream
-                = new FileInputStream(file);
+        // Double check it exists
+        if (!file.exists()) {
+            System.out.println("Error: File does not exist!");
+            return;
+        }
 
-        // Here we send the File to Server
-        ServerOut.writeLong(file.length());
+        // File input
+        FileInputStream fileInputStream = new FileInputStream(file);
+        // Get and send file size
+        long fileSize = file.length();
+        serverOut.writeLong(fileSize);
+
         // Here we  break file into chunks
-        byte[] buffer = new byte[4 * 1024];
-        while ((bytes = fileInputStream.read(buffer))
-                != -1) {
-            // Send the file to Server Socket
-            ServerOut.write(buffer, 0, bytes);
-            ServerOut.flush();
+        byte[] buffer = new byte[4096];
+        int bytesRead;
+        long totalSent = 0;
+        while ((bytesRead = serverIn.read(buffer)) != -1) {
+            serverOut.write(buffer, 0, bytesRead);
+            totalSent += bytesRead;
+
+            // Show progress
+            int progress = (int) ((totalSent * 100) / fileSize);
+            System.out.print("\rProgress: " + progress + "% (" + totalSent + "/" + fileSize + " bytes)");
         }
         // close the file here
-        fileInputStream.close();
+        serverIn.close();
+        System.out.println("\nFile sent successfully!");
+
+        // Wait for server to send back updated file
+        System.out.println("\nWaiting for updated file from server...");
+        receiveUpdatedFile();
+    }
+
+    private void receiveUpdatedFile() throws IOException {
+        // Read file name from server
+        String fileName = serverIn.readUTF();
+        System.out.println("Receiving updated file: " + fileName);
+
+        // Read file size from server
+        long fileSize = serverIn.readLong();
+        System.out.println("File size: " + fileSize + " bytes");
+
+        // Create output file
+        FileOutputStream fileOutputStream = new FileOutputStream("client_received_" + fileName);
+        byte[] buffer = new byte[4096];
+        int bytesRead;
+        long totalReceived = 0;
+
+        // Receive file data
+        while (totalReceived < fileSize) {
+            int toRead = (int) Math.min(buffer.length, fileSize - totalReceived);
+            bytesRead = serverIn.read(buffer, 0, toRead);
+            if (bytesRead == -1) break;
+
+            fileOutputStream.write(buffer, 0, bytesRead);
+            totalReceived += bytesRead;
+
+            // Show progress
+            int progress = (int) ((totalReceived * 100) / fileSize);
+            System.out.print("\rProgress: " + progress + "% (" + totalReceived + "/" + fileSize + " bytes)");
+        }
+        fileOutputStream.close();
+        System.out.println("\nUpdated file received successfully!");
+
+        // Display file content
+        System.out.println("\n=== Content of updated file ===");
+        BufferedReader reader = new BufferedReader(new FileReader("client_received_" + fileName));
+        String line;
+        while ((line = reader.readLine()) != null) {
+            System.out.println(line);
+        }
+        reader.close();
     }
 
     public client(String addr, int port) {
@@ -86,7 +143,7 @@ public class client {
             System.out.println("Connected");
 
             // Sends output to the socket
-            ServerOut = new DataOutputStream(s.getOutputStream());
+            serverOut = new DataOutputStream(s.getOutputStream());
             serverIn = new DataInputStream(s.getInputStream());
         }
         // Print Unknown Host
@@ -103,7 +160,7 @@ public class client {
         // Send hellow message
         String m = "Hello from Client-" + getHost();
         try {
-            ServerOut.writeUTF(m);
+            serverOut.writeUTF(m);
 
             // Echo server response
             String serverResponse = serverIn.readUTF();
@@ -137,17 +194,17 @@ public class client {
                         break;
                     }
 
-                    ServerOut.writeUTF(userInput);
+                    serverOut.writeUTF(userInput);
 
                     // Echo response from server
                     String echo = serverIn.readUTF();
                     System.out.println(echo);
                 } else if (userInput.equals("2")) {
                     // File identifier for the server, probably a better way to do that but probably fine for an assignment
-                    ServerOut.writeUTF("FILE");
+                    serverOut.writeUTF("FILE_TRANSFER");
                     System.out.println("Enter the exact path to the file");
                     String fileName = mainScanner.nextLine();
-                    ServerOut.writeUTF(fileName);
+                    sendFile(fileName);
                 } else if (userInput.startsWith("Bye from Client-" + getHost()) || userInput.equals("3")) {
                     disconnect();
                     break;
@@ -155,10 +212,14 @@ public class client {
                     System.out.println("Invalid input");
                 }
             }
-            // Catch exceptions
+            // Catch IO exceptions
             catch (IOException i) {
                 System.out.println(i);
                 break;
+            }
+            // Catch other exceptions
+            catch (Exception e) {
+                throw new RuntimeException(e);
             }
         }
 
@@ -166,7 +227,7 @@ public class client {
         try {
             mainScanner.close();
             serverIn.close();
-            ServerOut.close();
+            serverOut.close();
             s.close();
         }
         // Catch errors

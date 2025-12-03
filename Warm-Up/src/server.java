@@ -1,5 +1,7 @@
 import java.net.*;
 import java.io.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Scanner;
 
 public class server {
@@ -62,6 +64,95 @@ public class server {
         fileOutputStream.close();
     }
 
+    private void receiveFile() throws IOException {
+        // Generate unique filename with timestamp
+        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+
+        // Read file name from client
+        String fileName = in.readUTF();
+        String savedFileName = "server_received_" + timestamp + "_" + fileName;
+
+        // Read file size from client
+        long fileSize = in.readLong();
+        System.out.println("Receiving file: " + fileName + " (" + fileSize + " bytes)");
+
+        // Save file locally
+        FileOutputStream fileOutputStream = new FileOutputStream(savedFileName);
+        byte[] buffer = new byte[4096];
+        int bytesRead;
+        long totalReceived = 0;
+
+        while (totalReceived < fileSize) {
+            int toRead = (int) Math.min(buffer.length, fileSize - totalReceived);
+            bytesRead = in.read(buffer, 0, toRead);
+            if (bytesRead == -1) break;
+
+            fileOutputStream.write(buffer, 0, bytesRead);
+            totalReceived += bytesRead;
+
+            // Show progress
+            int progress = (int) ((totalReceived * 100) / fileSize);
+            System.out.print("\rProgress: " + progress + "% (" + totalReceived + "/" + fileSize + " bytes)");
+        }
+        fileOutputStream.close();
+        System.out.println("\nFile saved as: " + savedFileName);
+
+        // Print file content
+        System.out.println("\n=== File Content ===");
+        BufferedReader reader = new BufferedReader(new FileReader(savedFileName));
+        String line;
+        int lineCount = 0;
+        while ((line = reader.readLine()) != null) {
+            System.out.println(line);
+            lineCount++;
+        }
+        reader.close();
+        System.out.println("Total lines: " + lineCount);
+
+        // Append new line to file
+        System.out.println("\nAppending new line to file...");
+        FileWriter fileWriter = new FileWriter(savedFileName, true);
+        BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
+        String newLine = "This is an added line from a server";
+        bufferedWriter.newLine();
+        bufferedWriter.write(newLine);
+        bufferedWriter.close();
+        System.out.println("Added: \"" + newLine + "\"");
+
+        // Send updated file back to client
+        sendUpdatedFile(savedFileName, fileName);
+    }
+
+    private void sendUpdatedFile(String filePath, String originalName) throws IOException {
+        File file = new File(filePath);
+        long fileSize = file.length();
+
+        System.out.println("\nSending updated file back to client...");
+
+        // Send file name (prepend "updated_" to original name)
+        out.writeUTF("updated_" + originalName);
+
+        // Send file size
+        out.writeLong(fileSize);
+
+        // Send file data
+        FileInputStream fileInputStream = new FileInputStream(file);
+        byte[] buffer = new byte[4096];
+        int bytesRead;
+        long totalSent = 0;
+
+        while ((bytesRead = fileInputStream.read(buffer)) != -1) {
+            out.write(buffer, 0, bytesRead);
+            totalSent += bytesRead;
+
+            // Show progress
+            int progress = (int) ((totalSent * 100) / fileSize);
+            System.out.print("\rProgress: " + progress + "% (" + totalSent + "/" + fileSize + " bytes)");
+        }
+        fileInputStream.close();
+        System.out.println("\nUpdated file sent to client!");
+    }
+
     // Constructor with port
     public server(int port) {
         try {
@@ -107,9 +198,9 @@ public class server {
                         break;
                     }
 
-                    if (m.equals("FILE")) {
-                        String path = in.readUTF();
-                        receiveFile(path);
+                    // Check for file transfer, probably a better way to do this
+                    if (m.equals("FILE_TRANSFER")) {
+                        receiveFile();
                     }
 
                     // Echo the message back
