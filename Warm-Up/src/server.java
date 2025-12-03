@@ -10,26 +10,30 @@ public class server {
     private DataInputStream in = null;
     private DataOutputStream out = null;
 
+    // Try to get machine's IP address, if fail throw exception
     private static String getIP() {
-        // Try to get machine's IP address, if fail throw exception
         String ipString = null;
         try {
             InetAddress ipAddress = InetAddress.getLocalHost();
             ipString = ipAddress.getHostAddress();
-        } catch (UnknownHostException e) {
+        }
+        // Catch Unknown Host
+        catch (UnknownHostException e) {
             System.err.println("Could not determine local host information: " + e.getMessage());
             e.printStackTrace();
         }
         return ipString;
     }
 
+    // Try to get machine's Host name, if fail throw exception
     private static String getHost() {
-        // Try to get machine's IP address, if fail throw exception
         String hostname = null;
         try {
             InetAddress ipAddress = InetAddress.getLocalHost();
             hostname = ipAddress.getHostName();
-        } catch (UnknownHostException e) {
+        }
+        // Catch Unknown Host
+        catch (UnknownHostException e) {
             System.err.println("Could not determine local host information: " + e.getMessage());
             e.printStackTrace();
         }
@@ -38,15 +42,14 @@ public class server {
 
     // Constructor with port
     public server(int port) {
-
-        // Starts server and waits for a connection
-        try
-        {
+        try {
+            // start server and wait for client
             ss = new ServerSocket(port);
             System.out.println("Server started");
 
             System.out.println("Waiting for a client ...");
 
+            // wait for client to connect
             s = ss.accept();
             System.out.println("Client accepted");
 
@@ -56,21 +59,23 @@ public class server {
             );
             out = new DataOutputStream(s.getOutputStream());
 
+            // Read and print client input
             String m = in.readUTF();
             System.out.println("Client: " + m);
 
+            // If hello message respond with hello from server
             if (m.startsWith("Hello from Client-")) {
-                // Send initial server response
                 String serverHello = "Hello from Server-" + getHost();
                 out.writeUTF(serverHello);
             }
 
-            // Reads message from client until "Over" is sent
-            while (true)
-            {
+            // Reads message from client until termination is sent
+            while (true) {
                 try {
+                    // Take and print input
                     m = in.readUTF();
                     System.out.println("Client: " + m);
+
 
                     // Check for termination condition
                     if (m.startsWith("Bye from Client-")) {
@@ -80,30 +85,33 @@ public class server {
                         break;
                     }
 
-                    // Echo the message back (this was missing)
+                    // Echo the message back
                     out.writeUTF("Server: " + m);
 
+                    // Catch any exceptions
                 } catch (IOException i) {
                     System.out.println(i);
                     break;
                 }
             }
-            System.out.println("Closing connection");
 
-            // Close connection
+            // Close connections
+
+            System.out.println("Closing connection");
             s.close();
             in.close();
             out.close();
             ss.close();
+
         }
-        catch(IOException i)
-        {
+        // Catch any exceptions (client dies)
+        catch (IOException i) {
             System.out.println(i);
         }
     }
 
     public static void main(String args[]) {
-
+        // Print IP address & hostname
         System.out.println("Your IP is: " + getIP());
         System.out.println("Your Hostname is: " + getHost());
 
