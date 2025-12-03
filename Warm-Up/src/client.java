@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.*;
+import java.util.Objects;
 import java.util.Scanner;
 
 public class client {
@@ -36,6 +37,46 @@ public class client {
             e.printStackTrace();
         }
         return ipString;
+    }
+
+    // Simpler disconnect
+    private void disconnect(){
+        try {
+        String userInput = "Bye from Client-" + getHost();
+
+        ServerOut.writeUTF(userInput);
+
+        String serverBye = serverIn.readUTF();
+        System.out.println("Server: " + serverBye);
+
+        }
+        catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+
+    }
+
+    private void sendFile(String path) throws Exception
+    {
+        ServerOut = new DataOutputStream(s.getOutputStream());
+        int bytes = 0;
+        // Open the File where he located in your pc
+        File file = new File(path);
+        FileInputStream fileInputStream
+                = new FileInputStream(file);
+
+        // Here we send the File to Server
+        ServerOut.writeLong(file.length());
+        // Here we  break file into chunks
+        byte[] buffer = new byte[4 * 1024];
+        while ((bytes = fileInputStream.read(buffer))
+                != -1) {
+            // Send the file to Server Socket
+            ServerOut.write(buffer, 0, bytes);
+            ServerOut.flush();
+        }
+        // close the file here
+        fileInputStream.close();
     }
 
     public client(String addr, int port) {
@@ -78,28 +119,37 @@ public class client {
         while (true) {
             try {
                 // Take input
-                System.out.print("Enter message (or type 'Bye from Client-" + getHost() + "' to quit): ");
+                System.out.print("Select from below; \n1. Enter message \n2. Send file \n 3. Exit (or type 'Bye from Client-" + getHost() + "' to quit): ");
                 userInput = mainScanner.nextLine();
 
-                // Catch empty message
-                if (userInput.trim().isEmpty()) {
-                    System.out.println("Please enter a message.");
-                    continue;
-                }
+                if (userInput.equals("1")) {
+                    //Send message
+                    System.out.println("Enter a message to send: ");
+                    userInput = mainScanner.nextLine();
 
-                //Send message
-                ServerOut.writeUTF(userInput);
+                    if (userInput.trim().isEmpty()) {
+                        System.out.println("Please enter a message.");
+                        continue;
+                    }
 
-                // Disconnect
-                if (userInput.startsWith("Bye from Client-" + getHost())) {
-                    String serverBye = serverIn.readUTF();
-                    System.out.println("Server: " + serverBye);
+                    if (userInput.startsWith("Bye from Client-" + getHost())) {
+                        disconnect();
+                        break;
+                    }
+
+                    ServerOut.writeUTF(userInput);
+
+                    // Echo response from server
+                    String echo = serverIn.readUTF();
+                    System.out.println(echo);
+                } else if (userInput.equals("2")) {
+                    // send file call here
+                } else if (userInput.startsWith("Bye from Client-" + getHost()) || userInput.equals("3")) {
+                    disconnect();
                     break;
+                } else {
+                    System.out.println("Invalid input");
                 }
-
-                // Echo response from server
-                String echo = serverIn.readUTF();
-                System.out.println(echo);
             }
             // Catch exceptions
             catch (IOException i) {
