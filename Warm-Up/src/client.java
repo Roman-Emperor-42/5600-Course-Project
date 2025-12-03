@@ -10,9 +10,8 @@ public class client {
     private static Scanner mainScanner = null;
 
 
-
+    // Try to get machine's Host name, if fail throw exception
     private static String getHost() {
-        // Try to get machine's IP address, if fail throw exception
         String hostname = null;
         try {
             InetAddress ipAddress = InetAddress.getLocalHost();
@@ -22,6 +21,19 @@ public class client {
             e.printStackTrace();
         }
         return hostname;
+    }
+
+    // Try to get machine's IP address, if fail throw exception
+    private static String getIP() {
+        String ipString = null;
+        try {
+            InetAddress ipAddress = InetAddress.getLocalHost();
+            ipString = ipAddress.getHostAddress();
+        } catch (UnknownHostException e) {
+            System.err.println("Could not determine local host information: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return ipString;
     }
 
     public client(String addr, int port) {
@@ -48,7 +60,7 @@ public class client {
         String m = "Hello from Client-" + getHost();
         try {
             out.writeUTF(m);
-            System.out.println("Client: " + m);
+            //System.out.println("Client: " + m);
 
             String serverResponse = serverIn.readUTF();
             System.out.println("Server: " + serverResponse);
@@ -57,16 +69,24 @@ public class client {
             System.out.println(i);
         }
 
+        // Java is quirky and will auto send a blank line if you don't take an input before ¯\O/¯ (this is a shrugging emoji cause idk why it does thisz)
+        String userInput = mainScanner.nextLine();
+
         // Keep reading until "Over" is input
-        while (true) {
+        while(true) {
             try {
-                System.out.print("Enter message (or type 'Bye from Client-" + getHost() + "' to quit): ): ");
-                String userInput = mainScanner.nextLine();
+                System.out.print("Enter message (or type 'Bye from Client-" + getHost() + "' to quit): ");
+                userInput = mainScanner.nextLine();
+
+                if (userInput.trim().isEmpty()) {
+                    System.out.println("Please enter a message.");
+                    continue;
+                }
 
                 out.writeUTF(userInput);
-                System.out.println("Client: " + userInput);
+                //System.out.println("Client: " + userInput);
 
-                if (userInput.startsWith("Bye from Client-")) {
+                if (userInput.startsWith("Bye from Client-" + getHost())) {
                     String serverBye = serverIn.readUTF();
                     System.out.println("Server: " + serverBye);
                     break;
@@ -94,6 +114,8 @@ public class client {
     }
 
     public static void main(String[] args) {
+        System.out.println("Your IP is: " + getIP());
+        System.out.println("Your hostname is: " + getHost());
         mainScanner = new Scanner(System.in);
         System.out.println("Enter IP Address:");
         String ip = mainScanner.nextLine();
