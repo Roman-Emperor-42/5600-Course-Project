@@ -42,28 +42,6 @@ public class server {
         return hostname;
     }
 
-    private void receiveFile(String fileName)
-            throws Exception
-    {
-        int bytes = 0;
-        FileOutputStream fileOutputStream = new FileOutputStream(fileName);
-
-        long size = in.readLong(); // read file size
-        byte[] buffer = new byte[4 * 1024];
-        while (size > 0
-                && (bytes = in.read(
-                buffer, 0,
-                (int)Math.min(buffer.length, size)))
-                != -1) {
-            // Here we write the file using write method
-            fileOutputStream.write(buffer, 0, bytes);
-            size -= bytes; // read upto file size
-        }
-        // Here we received file
-        System.out.println("File is Received");
-        fileOutputStream.close();
-    }
-
     private void receiveFile() throws IOException {
         // Generate unique filename with timestamp
         String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
@@ -74,7 +52,6 @@ public class server {
 
         // Read file size from client
         long fileSize = in.readLong();
-        System.out.println("Receiving file: " + fileName + " (" + fileSize + " bytes)");
 
         // Save file locally
         FileOutputStream fileOutputStream = new FileOutputStream(savedFileName);
@@ -89,10 +66,6 @@ public class server {
 
             fileOutputStream.write(buffer, 0, bytesRead);
             totalReceived += bytesRead;
-
-            // Show progress
-            int progress = (int) ((totalReceived * 100) / fileSize);
-            System.out.print("\rProgress: " + progress + "% (" + totalReceived + "/" + fileSize + " bytes)");
         }
         fileOutputStream.close();
         System.out.println("\nFile saved as: " + savedFileName);
@@ -107,7 +80,6 @@ public class server {
             lineCount++;
         }
         reader.close();
-        System.out.println("Total lines: " + lineCount);
 
         // Append new line to file
         System.out.println("\nAppending new line to file...");
@@ -117,7 +89,6 @@ public class server {
         bufferedWriter.newLine();
         bufferedWriter.write(newLine);
         bufferedWriter.close();
-        System.out.println("Added: \"" + newLine + "\"");
 
         // Send updated file back to client
         sendUpdatedFile(savedFileName, fileName);
@@ -139,15 +110,10 @@ public class server {
         FileInputStream fileInputStream = new FileInputStream(file);
         byte[] buffer = new byte[4096];
         int bytesRead;
-        long totalSent = 0;
 
+        // While file has file left
         while ((bytesRead = fileInputStream.read(buffer)) != -1) {
             out.write(buffer, 0, bytesRead);
-            totalSent += bytesRead;
-
-            // Show progress
-            int progress = (int) ((totalSent * 100) / fileSize);
-            System.out.print("\rProgress: " + progress + "% (" + totalSent + "/" + fileSize + " bytes)");
         }
         fileInputStream.close();
         System.out.println("\nUpdated file sent to client!");
@@ -192,9 +158,9 @@ public class server {
 
                     // Check for termination condition
                     if (m.startsWith("Bye from Client-")) {
-                        String serverBye = "Bye from Server-" + getHost();
-                        out.writeUTF(serverBye);
-                        System.out.println("Server: " + serverBye);
+                        m = "Bye from Server-" + getHost();
+                        out.writeUTF(m);
+                        System.out.println("Server: " + m);
                         break;
                     }
 

@@ -56,37 +56,32 @@ public class client {
 
     }
 
-    private void sendFile(String path) throws Exception
-    {
-        serverOut = new DataOutputStream(s.getOutputStream());
-        int bytes = 0;
-        // Open the File where he located in your pc
+    private void sendFile(String path) throws IOException {
         File file = new File(path);
-        // Double check it exists
+
+        // Check if file exists
         if (!file.exists()) {
             System.out.println("Error: File does not exist!");
             return;
         }
 
-        // File input
-        FileInputStream fileInputStream = new FileInputStream(file);
-        // Get and send file size
         long fileSize = file.length();
+
+        // Send file name
+        serverOut.writeUTF(file.getName());
+
+        // Send file size
         serverOut.writeLong(fileSize);
 
-        // Here we  break file into chunks
+        // Send file data in chunks
+        FileInputStream serverIn = new FileInputStream(file);
         byte[] buffer = new byte[4096];
         int bytesRead;
-        long totalSent = 0;
+
+        // While file has more left
         while ((bytesRead = serverIn.read(buffer)) != -1) {
             serverOut.write(buffer, 0, bytesRead);
-            totalSent += bytesRead;
-
-            // Show progress
-            int progress = (int) ((totalSent * 100) / fileSize);
-            System.out.print("\rProgress: " + progress + "% (" + totalSent + "/" + fileSize + " bytes)");
         }
-        // close the file here
         serverIn.close();
         System.out.println("\nFile sent successfully!");
 
@@ -102,7 +97,6 @@ public class client {
 
         // Read file size from server
         long fileSize = serverIn.readLong();
-        System.out.println("File size: " + fileSize + " bytes");
 
         // Create output file
         FileOutputStream fileOutputStream = new FileOutputStream("client_received_" + fileName);
@@ -119,12 +113,8 @@ public class client {
             fileOutputStream.write(buffer, 0, bytesRead);
             totalReceived += bytesRead;
 
-            // Show progress
-            int progress = (int) ((totalReceived * 100) / fileSize);
-            System.out.print("\rProgress: " + progress + "% (" + totalReceived + "/" + fileSize + " bytes)");
         }
         fileOutputStream.close();
-        System.out.println("\nUpdated file received successfully!");
 
         // Display file content
         System.out.println("\n=== Content of updated file ===");
@@ -176,7 +166,7 @@ public class client {
         while (true) {
             try {
                 // Take input
-                System.out.print("Select from below; \n1. Enter message \n2. Send file \n 3. Exit (or type 'Bye from Client-" + getHost() + "' to quit): ");
+                System.out.print("Select from below; \n1. Enter message \n2. Send file \n3. Exit (or type 'Bye from Client-" + getHost() + "' to quit): ");
                 userInput = mainScanner.nextLine();
 
                 if (userInput.equals("1")) {
