@@ -42,12 +42,12 @@ public class client {
     // Simpler disconnect
     private void disconnect(){
         try {
-        String userInput = "Bye from Client-" + getHost();
+            String userInput = "Bye from Client-" + getHost();
 
-        serverOut.writeUTF(userInput);
+            serverOut.writeUTF(userInput);
 
-        String serverBye = serverIn.readUTF();
-        System.out.println("Server: " + serverBye);
+            String serverBye = serverIn.readUTF();
+            System.out.println("Server: " + serverBye);
 
         }
         catch (IOException e) {
@@ -124,9 +124,6 @@ public class client {
             System.out.println(line);
         }
         reader.close();
-
-        // Clear the leftover cache, hacky fix but it should work.
-        fileName = serverIn.readUTF();
     }
 
     public client(String addr, int port) {
