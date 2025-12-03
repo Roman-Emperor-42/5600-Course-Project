@@ -63,7 +63,6 @@ public class server {
                 // Send initial server response
                 String serverHello = "Hello from Server-" + getHost();
                 out.writeUTF(serverHello);
-                System.out.println("Server: " + serverHello);
             }
 
             // Reads message from client until "Over" is sent
@@ -105,7 +104,8 @@ public class server {
 
     public static void main(String args[]) {
 
-        System.out.println("Local IP Address: " + getIP());
+        System.out.println("Your IP is: " + getIP());
+        System.out.println("Your Hostname is: " + getHost());
 
         // what port to broadcast on
         Scanner in = new Scanner(System.in);
