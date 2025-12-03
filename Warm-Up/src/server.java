@@ -40,6 +40,28 @@ public class server {
         return hostname;
     }
 
+    private void receiveFile(String fileName)
+            throws Exception
+    {
+        int bytes = 0;
+        FileOutputStream fileOutputStream = new FileOutputStream(fileName);
+
+        long size = in.readLong(); // read file size
+        byte[] buffer = new byte[4 * 1024];
+        while (size > 0
+                && (bytes = in.read(
+                buffer, 0,
+                (int)Math.min(buffer.length, size)))
+                != -1) {
+            // Here we write the file using write method
+            fileOutputStream.write(buffer, 0, bytes);
+            size -= bytes; // read upto file size
+        }
+        // Here we received file
+        System.out.println("File is Received");
+        fileOutputStream.close();
+    }
+
     // Constructor with port
     public server(int port) {
         try {
@@ -85,13 +107,22 @@ public class server {
                         break;
                     }
 
+                    if (m.equals("FILE")) {
+                        String path = in.readUTF();
+                        receiveFile(path);
+                    }
+
                     // Echo the message back
                     out.writeUTF("Server: " + m);
-
-                    // Catch any exceptions
-                } catch (IOException i) {
+                }
+                // Catch IO exceptions
+                catch (IOException i) {
                     System.out.println(i);
                     break;
+                }
+                // Catch other exceptions
+                catch (Exception e) {
+                    throw new RuntimeException(e);
                 }
             }
 

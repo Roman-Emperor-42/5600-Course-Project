@@ -143,7 +143,11 @@ public class client {
                     String echo = serverIn.readUTF();
                     System.out.println(echo);
                 } else if (userInput.equals("2")) {
-                    // send file call here
+                    // File identifier for the server, probably a better way to do that but probably fine for an assignment
+                    ServerOut.writeUTF("FILE");
+                    System.out.println("Enter the exact path to the file");
+                    String fileName = mainScanner.nextLine();
+                    ServerOut.writeUTF(fileName);
                 } else if (userInput.startsWith("Bye from Client-" + getHost()) || userInput.equals("3")) {
                     disconnect();
                     break;
