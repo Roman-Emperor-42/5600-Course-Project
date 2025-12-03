@@ -87,10 +87,6 @@ public class client {
                     System.out.println("Please enter a message.");
                     continue;
                 }
-
-                //Send message
-                ServerOut.writeUTF(userInput);
-
                 // Disconnect
                 if (userInput.startsWith("Bye from Client-" + getHost())) {
                     String serverBye = serverIn.readUTF();
