@@ -124,6 +124,9 @@ public class client {
             System.out.println(line);
         }
         reader.close();
+
+        // Clear the leftover cache, hacky fix but it should work.
+        fileName = serverIn.readUTF();
     }
 
     public client(String addr, int port) {
