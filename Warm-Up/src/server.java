@@ -8,6 +8,7 @@ public class server {
     private Socket s = null;
     private ServerSocket ss = null;
     private DataInputStream in = null;
+    private DataOutputStream out = null;
 
     private static String getIP() {
         // Try to get machine's IP address, if fail throw exception
@@ -51,23 +52,41 @@ public class server {
 
             // Takes input from the client socket
             in = new DataInputStream(
-                    new BufferedInputStream(s.getInputStream()));
+                    new BufferedInputStream(s.getInputStream())
+            );
+            out = new DataOutputStream(s.getOutputStream());
 
-            String m = "Hello from Server-" + getHost();
-            System.out.println(m);
+            String m = in.readUTF();
+            System.out.println("Client: " + m);
+
+            if (m.startsWith("Hello from Client-")) {
+                // Send initial server response
+                String serverHello = "Hello from Server-" + getHost();
+                out.writeUTF(serverHello);
+                System.out.println("Server: " + serverHello);
+            }
 
             // Reads message from client until "Over" is sent
-            while (!m.equals("Over"))
+            while (true)
             {
-                try
-                {
+                try {
                     m = in.readUTF();
-                    System.out.println(m);
+                    System.out.println("Client: " + m);
 
-                }
-                catch(IOException i)
-                {
+                    // Check for termination condition
+                    if (m.startsWith("Bye from Client-")) {
+                        String serverBye = "Bye from Server-" + getHost();
+                        out.writeUTF(serverBye);
+                        System.out.println("Server: " + serverBye);
+                        break;
+                    }
+
+                    // Echo the message back (this was missing)
+                    out.writeUTF("Server: " + m);
+
+                } catch (IOException i) {
                     System.out.println(i);
+                    break;
                 }
             }
             System.out.println("Closing connection");
@@ -75,6 +94,8 @@ public class server {
             // Close connection
             s.close();
             in.close();
+            out.close();
+            ss.close();
         }
         catch(IOException i)
         {
@@ -90,7 +111,7 @@ public class server {
         Scanner in = new Scanner(System.in);
         System.out.println("Enter Port (make sure port is open):");
         int port = in.nextInt();
-
+        in.close();
         server s = new server(port);
     }
 }

@@ -5,8 +5,10 @@ import java.util.Scanner;
 public class client {
 
     private Socket s = null;
-    private DataInputStream in = null;
     private DataOutputStream out = null;
+    private DataInputStream serverIn = null;
+    private static Scanner mainScanner = null;
+
 
 
     private static String getHost() {
@@ -22,18 +24,16 @@ public class client {
         return hostname;
     }
 
-    public client(String addr, int port)
-    {
+    public client(String addr, int port) {
         // Establish a connection
         try {
             s = new Socket(addr, port);
             System.out.println("Connected");
 
-            // Takes input from terminal
-            in = new DataInputStream(System.in);
-
             // Sends output to the socket
             out = new DataOutputStream(s.getOutputStream());
+
+            serverIn = new DataInputStream(s.getInputStream());
         }
         catch (UnknownHostException u) {
             System.out.println(u);
@@ -48,25 +48,43 @@ public class client {
         String m = "Hello from Client-" + getHost();
         try {
             out.writeUTF(m);
+            System.out.println("Client: " + m);
+
+            String serverResponse = serverIn.readUTF();
+            System.out.println("Server: " + serverResponse);
         }
         catch (IOException i) {
             System.out.println(i);
         }
 
         // Keep reading until "Over" is input
-        while (!m.equals("Over")) {
+        while (true) {
             try {
-                m = in.readLine();
-                out.writeUTF(m);
+                System.out.print("Enter message (or type 'Bye from Client-" + getHost() + "' to quit): ): ");
+                String userInput = mainScanner.nextLine();
+
+                out.writeUTF(userInput);
+                System.out.println("Client: " + userInput);
+
+                if (userInput.startsWith("Bye from Client-")) {
+                    String serverBye = serverIn.readUTF();
+                    System.out.println("Server: " + serverBye);
+                    break;
+                }
+
+                String echo = serverIn.readUTF();
+                System.out.println(echo);
             }
             catch (IOException i) {
                 System.out.println(i);
+                break;
             }
         }
 
         // Close the connection
         try {
-            in.close();
+            mainScanner.close();
+            serverIn.close();
             out.close();
             s.close();
         }
@@ -76,12 +94,13 @@ public class client {
     }
 
     public static void main(String[] args) {
-        Scanner in = new Scanner(System.in);
+        mainScanner = new Scanner(System.in);
         System.out.println("Enter IP Address:");
-        String ip = in.nextLine();
+        String ip = mainScanner.nextLine();
 
         System.out.println("Enter Port:");
-        int port = in.nextInt();
+        int port = mainScanner.nextInt();
+        //mainScanner.close();
 
         client c = new client(ip, port);
     }
