@@ -45,8 +45,7 @@ public class server {
         try {
             // start server and wait for client
             ss = new ServerSocket(port);
-            System.out.println("Server started");
-
+            System.out.println("Chat server started on port " + port);
             System.out.println("Waiting for a client ...");
 
             // wait for client to connect
@@ -69,7 +68,6 @@ public class server {
                     m = in.readUTF();
                     System.out.println("Client: " + m);
 
-
                     // Check for termination condition
                     if (m.equalsIgnoreCase("exit")) {
                         out.writeUTF("Goodbye!");
@@ -78,7 +76,7 @@ public class server {
                     }
 
                     // Echo the message back
-                    out.writeUTF("Server: " + m);
+                    // out.writeUTF("Server: " + m);
                 }
                 // Catch IO exceptions
                 catch (IOException i) {
