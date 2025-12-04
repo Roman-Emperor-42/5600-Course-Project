@@ -14,7 +14,7 @@ public class server {
     private DataInputStream in = null;
     private DataOutputStream out = null;
     private static final ExecutorService pool = Executors.newCachedThreadPool();
-    private int clientCount = 0;
+    private static int clientCount = 0;
 
 
     // Try to get machine's IP address, if fail throw exception
@@ -49,91 +49,105 @@ public class server {
     }
 
 
-    // Constructor with port
-    public server(int port) {
-        try {
-            // start server and wait for client
-            ss = new ServerSocket(port);
-            System.out.println("Multi user chat server started on port " + port);
-            boolean clientConnected = false;
-            String m;
+    private static class ClientHandler implements Runnable {
+        private Socket socket;
+        private int clientId;
 
-            while (true) {
-                System.out.println("Waiting for a client ...");
+        public ClientHandler(Socket socket, int clientId) {
+            this.socket = socket;
+            this.clientId = clientId;
+        }
 
+        @Override
+        public void run() {
+            DataInputStream in = null;
+            DataOutputStream out = null;
 
-                // wait for client to connect
-                s = ss.accept();
-                System.out.println("Client connected: " + s.getInetAddress());
-                clientConnected = true;
+            try {
+                in = new DataInputStream(socket.getInputStream());
+                out = new DataOutputStream(socket.getOutputStream());
 
+                // Send welcome message
+                out.writeUTF("Welcome to Multi-Client Chat Server! You are Client #" +
+                        clientId + ". Type 'exit' to disconnect.");
 
-                // Takes input from the client socket
-                in = new DataInputStream(new BufferedInputStream(s.getInputStream()));
-                out = new DataOutputStream(s.getOutputStream());
+                System.out.println("Client #" + clientId + " handler started.");
 
-                out.writeUTF("Welcome to the Chat Server! Type 'exit' to quit.");
-                // Reads message from client until termination is sent
-                // Input message
+                String message;
+                while (true) {
+                    message = in.readUTF();
 
-                while (clientConnected) {
-                    try {
-                        // Take and print input
-                        m = in.readUTF();
-                        System.out.println("Client: " + m);
-
-                        if (m.equals("exit")) {
-                            System.out.println("Client disconnected.");
-                            clientConnected = false;
-                        }
-
-                        // Echo the message back
-                        // out.writeUTF("Server: " + m);
-                    }
-                    catch (EOFException e) {
-                        System.out.println("Client connection lost.");
-                        clientConnected = false;
-                    }
-                    // Catch IO exceptions
-                    catch (IOException i) {
-                        System.out.println(i);
+                    if (message.equalsIgnoreCase("exit")) {
+                        System.out.println("Client #" + clientId + " disconnected.");
                         break;
                     }
-                    // Catch other exceptions
-                    catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
+
+                    System.out.println("Client #" + clientId + ": " + message);
+
+                    // Send acknowledgment back to client
+                    out.writeUTF("Server: Message received from Client #" + clientId);
+                }
+
+            } catch (IOException e) {
+                System.out.println("Client #" + clientId + " connection error: " + e.getMessage());
+            } finally {
+                // Close resources
+                try {
+                    if (in != null) in.close();
+                    if (out != null) out.close();
+                    if (socket != null) socket.close();
+                } catch (IOException e) {
+                    System.out.println("Error closing resources for Client #" + clientId);
                 }
             }
-
-
-            // Close connections
-            //System.out.println("Client disconnected. Closing connection...");
-            //s.close();
-            //in.close();
-            //out.close();
-            //ss.close();
-
-
-        }
-        // Catch any exceptions (client dies)
-        catch (IOException i) {
-            System.out.println(i);
         }
     }
 
+
+    // Constructor with port
 
     public static void main(String args[]) {
         // Print IP address & hostname
+        System.out.println("Multi-Client Chat Server");
         System.out.println("Your IP is: " + getIP());
         System.out.println("Your Hostname is: " + getHost());
 
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Enter Port (make sure port is open): ");
+        int port = scanner.nextInt();
+        scanner.close();
 
-        // what port to broadcast on
-        Scanner in = new Scanner(System.in);
-        System.out.println("Enter Port (make sure port is open):");
-        int port = in.nextInt();
-        in.close();
-        server s = new server(port);
+        ServerSocket serverSocket = null;
+
+        try {
+            serverSocket = new ServerSocket(port);
+            System.out.println("\nServer started on port " + port);
+            System.out.println("Waiting for client connections...");
+            System.out.println("This server can handle multiple clients simultaneously.");
+            System.out.println("Press Ctrl+C to stop the server.\n");
+
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                clientCount++;
+
+                System.out.println("New client #" + clientCount + " connected from: " +
+                        clientSocket.getInetAddress().getHostAddress());
+
+                ClientHandler clientHandler = new ClientHandler(clientSocket, clientCount);
+                pool.execute(clientHandler);
+            }
+
+        } catch (IOException e) {
+            System.out.println("Server error: " + e.getMessage());
+        } finally {
+            // Clean up
+            pool.shutdown();
+            try {
+                if (serverSocket != null) serverSocket.close();
+            } catch (IOException e) {
+                System.out.println("Error closing server socket: " + e.getMessage());
+            }
+        }
     }
 }
+
