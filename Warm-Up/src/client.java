@@ -117,7 +117,7 @@ public class client {
         fileOutputStream.close();
 
         // Display file content
-        System.out.println("\n=== Content of updated file ===");
+        System.out.println("\n Content of updated file ");
         BufferedReader reader = new BufferedReader(new FileReader("client_received_" + fileName));
         String line;
         while ((line = reader.readLine()) != null) {

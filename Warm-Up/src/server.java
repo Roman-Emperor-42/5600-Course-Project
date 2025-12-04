@@ -71,7 +71,7 @@ public class server {
         System.out.println("\nFile saved as: " + savedFileName);
 
         // Print file content
-        System.out.println("\n=== File Content ===");
+        System.out.println("\nFile Content:");
         BufferedReader reader = new BufferedReader(new FileReader(savedFileName));
         String line;
         int lineCount = 0;
