@@ -1,5 +1,9 @@
-import java.io.*;
-import java.net.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.Scanner;
 
 public class client {
@@ -41,7 +45,7 @@ public class client {
     // Simpler disconnect
     private void disconnect() {
         try {
-            String userInput = "Bye from Client-" + getHost();
+            String userInput = "exit";
 
             serverOut.writeUTF(userInput);
 
@@ -110,8 +114,8 @@ public class client {
                 serverOut.writeUTF(userInput);
 
                 // Echo response from server
-                String echo = serverIn.readUTF();
-                System.out.println(echo);
+                // String echo = serverIn.readUTF();
+                // System.out.println(echo);
 
             }
             // Catch IO exceptions
