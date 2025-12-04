@@ -11,6 +11,7 @@ public class client {
     private DataOutputStream serverOut = null;
     private DataInputStream serverIn = null;
     private static Scanner mainScanner = null;
+    private boolean running = true;
 
     // Try to get machine's Host name, if fail throw exception
     private static String getHost() {
@@ -44,18 +45,15 @@ public class client {
 
     // Simpler disconnect
     private void disconnect() {
+        running = false;
         try {
-            String userInput = "exit";
-
-            serverOut.writeUTF(userInput);
-
-            String serverBye = serverIn.readUTF();
-            System.out.println("Server: " + serverBye);
-
+            mainScanner.close();
+            serverIn.close();
+            serverOut.close();
+            s.close();
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            System.out.println("Error closing connections: " + e.getMessage());
         }
-
     }
 
     public client(String addr, int port) {
@@ -67,6 +65,43 @@ public class client {
             // Sends output to the socket
             serverOut = new DataOutputStream(s.getOutputStream());
             serverIn = new DataInputStream(s.getInputStream());
+            mainScanner = new Scanner(System.in);
+
+            Thread receiveThread = new Thread(() -> {
+                try {
+                    while (running) {
+                        String serverMessage = serverIn.readUTF();
+                        System.out.println(serverMessage);
+                    }
+                } catch (IOException e) {
+                    if (running) {
+                        System.out.println("\nDisconnected from server.");
+                    }
+                }
+            });
+            receiveThread.start();
+
+            // Read welcome messages
+            System.out.println(serverIn.readUTF());  // Welcome message
+            System.out.println(serverIn.readUTF());  // Client count
+            System.out.println("Type 'exit' to quit\n");
+
+            String m;
+            while (running) {
+                System.out.print("You: ");
+                m = mainScanner.nextLine();
+
+                // Send message to server
+                serverOut.writeUTF(m);
+
+                if (m.equalsIgnoreCase("exit")) {
+                    running = false;
+                    System.out.println("Disconnecting...");
+                    break;
+                }
+            }
+            Thread.sleep(100); // Small delay to receive goodbye
+            System.out.println("Connection closed.");
         }
         // Print Unknown Host
         catch (UnknownHostException u) {
@@ -78,67 +113,11 @@ public class client {
             System.out.println(i);
             return;
         }
-
-        // Send hellow message
-        String m = "Hello from Client-" + getHost();
-        try {
-            serverOut.writeUTF(m);
-
-            // Echo server response
-            String serverResponse = serverIn.readUTF();
-            System.out.println("Server: " + serverResponse);
-        } catch (IOException i) {
-            System.out.println(i);
+        catch (InterruptedException e) {
+            System.out.println("Error: " + e.getMessage());
         }
-
-        // Java is quirky and will auto send a blank line if you don't take an input before ¯\O/¯ (this is a shrugging emoji cause idk why it does thisz)
-        String userInput = mainScanner.nextLine();
-
-        // Keep reading until "exit" is input
-        while (true) {
-            try {
-                // Get and send message
-                System.out.println("Enter a message to send (or exit to quit): ");
-                userInput = mainScanner.nextLine();
-
-                if (userInput.trim().isEmpty()) {
-                    System.out.println("Please enter a message.");
-                    continue;
-                }
-
-                if (userInput.startsWith("exit")) {
-                    disconnect();
-                    break;
-                }
-
-                serverOut.writeUTF(userInput);
-
-                // Echo response from server
-                // String echo = serverIn.readUTF();
-                // System.out.println(echo);
-
-            }
-            // Catch IO exceptions
-            catch (IOException i) {
-                System.out.println(i);
-                break;
-            }
-            // Catch other exceptions
-            catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        // Close the connections
-        try {
-            mainScanner.close();
-            serverIn.close();
-            serverOut.close();
-            s.close();
-        }
-        // Catch errors
-        catch (IOException i) {
-            System.out.println(i);
+        finally {
+            disconnect();
         }
     }
 
@@ -155,7 +134,7 @@ public class client {
         int port = mainScanner.nextInt();
 
         // Start client
-        client c = new client(ip, port);
+        new client(ip, port);
         mainScanner.close();
     }
 }
